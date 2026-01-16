@@ -1,0 +1,10 @@
+[package]
+name = "Vigur"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+cesu8 = "1.1.0"
+
+[lints.rust]
+unused = "allow"
