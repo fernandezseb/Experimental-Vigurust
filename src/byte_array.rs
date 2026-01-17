@@ -1,5 +1,3 @@
-#[allow(dead_code)]
-
 pub struct ByteArray {
     bytes: Vec<u8>,
     current: usize
