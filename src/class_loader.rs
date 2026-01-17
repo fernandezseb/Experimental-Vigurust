@@ -82,7 +82,7 @@ pub struct ClassLoader {
 enum ConstantPoolItem {
     CPMethodRef{class_index: u16, name_and_type_index: u16},
     CPClassInfo{name_index: u16},
-    CPUTF8Info{utf8_string: String}, // TODO: Convert to utf8 string
+    CPUTF8Info{utf8_string: String},
     CPFieldRef{class_index: u16, name_and_type_index: u16},
     CPStringInfo{string_index: u16},
     CPNameAndTypeInfo{name_index: u16, descriptor_index: u16}
