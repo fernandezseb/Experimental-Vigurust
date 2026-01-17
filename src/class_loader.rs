@@ -51,10 +51,10 @@ struct ConstantPool {
 
 impl ConstantPool {
     fn get_string(self: &ConstantPool, index: u16) -> &str {
-        // TODO: Check index
+        // TODO: Check index?
         let item = &self.constants[(index) as usize];
         match item {
-            ConstantPoolItem::CPUTF8Info { tag, utf8_string } => {
+            ConstantPoolItem::CPUTF8Info { utf8_string } => {
                 utf8_string
             },
             other => panic!("No string found in constantpool at index: {}", index)
@@ -79,14 +79,13 @@ struct FieldInfo {
 pub struct ClassLoader {
 }
 
-// TODO: Maybe remove tag?
 enum ConstantPoolItem {
-    CPMethodRef{tag: u8, class_index: u16, name_and_type_index: u16},
-    CPClassInfo{tag: u8, name_index: u16},
-    CPUTF8Info{tag: u8, utf8_string: String}, // TODO: Convert to utf8 string
-    CPFieldRef{tag: u8, class_index: u16, name_and_type_index: u16},
-    CPStringInfo{tag: u8, string_index: u16},
-    CPNameAndTypeInfo{tag: u8, name_index: u16, descriptor_index: u16}
+    CPMethodRef{class_index: u16, name_and_type_index: u16},
+    CPClassInfo{name_index: u16},
+    CPUTF8Info{utf8_string: String}, // TODO: Convert to utf8 string
+    CPFieldRef{class_index: u16, name_and_type_index: u16},
+    CPStringInfo{string_index: u16},
+    CPNameAndTypeInfo{name_index: u16, descriptor_index: u16}
 }
 
 struct AttributeParser {
@@ -124,7 +123,6 @@ impl ClassLoader {
                 let class_index = byte_array.read_u16();
                 let name_and_type_index = byte_array.read_u16();
                 ConstantPoolItem::CPMethodRef {
-                    tag,
                     class_index,
                     name_and_type_index
                 }
@@ -132,7 +130,6 @@ impl ClassLoader {
             CT_CLASS => {
                 let name_index = byte_array.read_u16();
                 ConstantPoolItem::CPClassInfo {
-                    tag,
                     name_index
                 }
             },
@@ -140,7 +137,6 @@ impl ClassLoader {
                 let class_index = byte_array.read_u16();
                 let name_and_type_index = byte_array.read_u16();
                 ConstantPoolItem::CPFieldRef {
-                    tag,
                     class_index,
                     name_and_type_index
                 }
@@ -148,7 +144,6 @@ impl ClassLoader {
             CT_STRING => {
                 let string_index = byte_array.read_u16();
                 ConstantPoolItem::CPStringInfo {
-                    tag,
                     string_index
                 }
             },
@@ -156,7 +151,6 @@ impl ClassLoader {
                 let size = byte_array.read_u16() as usize;
                 let bytes: &[u8] = byte_array.read_bytes(size);
                 let cpitem = ConstantPoolItem::CPUTF8Info{
-                    tag,
                     utf8_string:  from_cesu8(bytes).unwrap().to_string()
                 };
                 cpitem
@@ -165,7 +159,6 @@ impl ClassLoader {
                 let name_index = byte_array.read_u16();
                 let descriptor_index = byte_array.read_u16();
                 ConstantPoolItem::CPNameAndTypeInfo {
-                    tag,
                     name_index,
                     descriptor_index
                 }
@@ -180,7 +173,7 @@ impl ClassLoader {
         let mut constant_pool: ConstantPool = ConstantPool { constants: Vec::with_capacity(cp_count) };
 
         // Add filler
-        constant_pool.constants.push(ConstantPoolItem::CPClassInfo { tag: 0, name_index: 0 });
+        constant_pool.constants.push(ConstantPoolItem::CPClassInfo { name_index: 0 });
 
         for _current_index in 0..(cp_count-1) {
             let tag = byte_array.read_u8();
@@ -191,7 +184,8 @@ impl ClassLoader {
 
     }
 
-    fn read_interfaces(byte_array: &mut ByteArray, count: usize) -> Vec<u16> {
+    fn read_interfaces(byte_array: &mut ByteArray) -> Vec<u16> {
+        let count = byte_array.read_u16() as usize;
         let mut vec: Vec<u16> = Vec::with_capacity(count);
         for _current_interface in 0..count {
             vec.push(byte_array.read_u16());
@@ -199,13 +193,15 @@ impl ClassLoader {
         vec
     }
 
-    fn read_fields(byte_array: &mut ByteArray, count: usize) -> Vec<FieldInfo> {
+    fn read_fields(byte_array: &mut ByteArray) -> Vec<FieldInfo> {
+        let count = byte_array.read_u16() as usize;
         let mut vec: Vec<FieldInfo> = Vec::with_capacity(count);
         // TODO: Implement
         vec
     }
 
-    fn read_methods(byte_array: &mut ByteArray, count: usize, constant_pool: &ConstantPool) -> Vec<MethodInfo> {
+    fn read_methods(byte_array: &mut ByteArray, constant_pool: &ConstantPool) -> Vec<MethodInfo> {
+        let count = byte_array.read_u16() as usize;
         let mut vec: Vec<MethodInfo> = Vec::with_capacity(count);
         for _current_method in 0..count {
             let access_flags = byte_array.read_u16();
@@ -230,11 +226,8 @@ impl ClassLoader {
         let access_flags = byte_array.read_u16();
         let this_class = byte_array.read_u16();
         let super_class = byte_array.read_u16();
-        let interfaces_count = byte_array.read_u16() as usize;
-        let interfaces = Self::read_interfaces(&mut byte_array, interfaces_count);
-        let fields_count = byte_array.read_u16() as usize;
-        let fields = Self::read_fields(&mut byte_array, fields_count);
-        let methods_count = byte_array.read_u16() as usize;
-        let methods = Self::read_methods(&mut byte_array, methods_count, &constant_pool);
+        let interfaces = Self::read_interfaces(&mut byte_array);
+        let fields = Self::read_fields(&mut byte_array);
+        let methods = Self::read_methods(&mut byte_array, &constant_pool);
     }
 }
