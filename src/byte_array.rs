@@ -38,4 +38,8 @@ impl ByteArray {
         bytes
     }
 
+    pub fn len(&self) -> usize {
+        self.bytes.len()
+    }
+
 }

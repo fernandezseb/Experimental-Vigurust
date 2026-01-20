@@ -2,6 +2,7 @@ use crate::byte_array::{self, ByteArray};
 
 use std::fs;
 use cesu8::from_cesu8;
+use crate::class_loader::AttributeInfo::{ATCode, ATLineNumberTable, ATLocalVariableTable, ATSourceFile};
 
 const MAGIC_NUMBER : u32 = 0xCAFEBABE;
 
@@ -21,28 +22,31 @@ const CT_METHODTYPE: u8      = 16;
 const CT_INVOKEDYNAMIC: u8   = 18;
 
 
-struct ClassInfo {
+pub struct ClassInfo {
     constant_pool: ConstantPool,
     file_path: String,
-    size: u64,
+    size: usize,
     last_modified_string: String,
     minor_version: u16,
     major_version: u16,
     access_flags: u16,
     this_class: u16,
     super_class: u16,
-    fields_count: u16,
+    interfaces: Vec<u16>,
+    fields: Vec<FieldInfo>,
+    methods: Vec<MethodInfo>,
+    attributes: Vec<AttributeInfo>,
     source_file: String,
-    static_fields_count: u16,
+    // static_fields_count: u16,
 }
 
 struct MethodInfo {
+    access_flags: u16,
     descriptor_index: u16,
     attributes: Vec<AttributeInfo>,
     return_type: String,
     args: Vec<String>,
-    args_count: u16,
-    name: String
+    name: String,
 }
 
 struct ConstantPool {
@@ -63,7 +67,16 @@ impl ConstantPool {
 }
 
 enum AttributeInfo {
-
+    ATLineNumberTable{entries: Vec<LineNumberTableEntry>},
+    ATCode{
+        max_stack: u16,
+        max_locals: u16,
+        code: Vec<u8>,
+        exceptions: Vec<ExceptionTableEntry>,
+        attributes: Vec<AttributeInfo>,
+    },
+    ATLocalVariableTable{entries: Vec<LocalVariableTableEnty>},
+    ATSourceFile{source_file_index: u16},
 }
 
 struct FieldInfo {
@@ -91,7 +104,45 @@ enum ConstantPoolItem {
 struct AttributeParser {
 }
 
+struct ExceptionTableEntry {
+    start_pc: u16,
+    end_pc: u16,
+    handler_pc: u16,
+    catch_type: u16,
+}
+
+struct LineNumberTableEntry {
+    start_pc: u16,
+    line_number: u16,
+}
+
+struct LocalVariableTableEnty {
+    start_pc: u16,
+    length: u16,
+    name_index: u16,
+    descriptor_index: u16,
+    index: u16,
+}
+
 impl AttributeParser {
+    fn read_exception_table_entry(byte_array: &mut ByteArray) -> ExceptionTableEntry {
+        let start_pc = byte_array.read_u16();
+        let end_pc = byte_array.read_u16();
+        let handler_pc = byte_array.read_u16();
+        let catch_type = byte_array.read_u16();
+
+        ExceptionTableEntry{start_pc, end_pc, handler_pc, catch_type}
+    }
+    fn read_exception_table(byte_array: &mut ByteArray) -> Vec<ExceptionTableEntry> {
+        let exception_table_length = byte_array.read_u16() as usize;
+        let mut exception_table: Vec<ExceptionTableEntry> = Vec::with_capacity(exception_table_length);
+        for _current_exception in 0..exception_table_length
+        {
+            exception_table.push(Self::read_exception_table_entry(byte_array));
+        }
+        exception_table
+    }
+
     fn read_attributes(byte_array: &mut ByteArray, constant_pool: &ConstantPool) -> Vec<AttributeInfo> {
         let count = byte_array.read_u16() as usize;
         let mut vec = Vec::with_capacity(count);
@@ -103,11 +154,52 @@ impl AttributeParser {
                 "Code" => {
                     let max_stack = byte_array.read_u16();
                     let max_locals = byte_array.read_u16();
-                    let code_length = byte_array.read_u32();
-                    let size = code_length as usize;
-                    let code = byte_array.read_bytes(size);
-                    
+                    let code_length = byte_array.read_u32() as usize;
+                    let code = byte_array.read_bytes(code_length);
+                    let code_vec = code.to_vec().clone();
+                    let exceptions = Self::read_exception_table(byte_array);
+                    let attributes = Self::read_attributes(byte_array, constant_pool);
+                    vec.push(ATCode {
+                        max_stack,
+                        max_locals,
+                        code: code_vec,
+                        exceptions,
+                        attributes
+                    });
                 },
+                "LineNumberTable" => {
+                    let line_number_table_length = byte_array.read_u16() as usize;
+                    let mut entries = Vec::with_capacity(line_number_table_length);
+                    for _line_number_table_entry in 0..line_number_table_length {
+                        let start_pc = byte_array.read_u16();
+                        let line_number = byte_array.read_u16();
+                        entries.push(LineNumberTableEntry{start_pc, line_number, });
+                    }
+                    vec.push(ATLineNumberTable {entries});
+                }
+                "LocalVariableTable" => {
+                    let local_variable_table_length = byte_array.read_u16() as usize;
+                    let mut entries = Vec::with_capacity(local_variable_table_length);
+                    for _local_variable_table_entry_index in 0..local_variable_table_length {
+                        let start_pc = byte_array.read_u16();
+                        let length = byte_array.read_u16();
+                        let name_index = byte_array.read_u16();
+                        let descriptor_index = byte_array.read_u16();
+                        let index = byte_array.read_u16();
+                        entries.push(LocalVariableTableEnty{
+                            start_pc,
+                            length,
+                            name_index,
+                            descriptor_index,
+                            index
+                        })
+                    }
+                    vec.push(ATLocalVariableTable {entries});
+                },
+                "SourceFile" => {
+                    let source_file_index = byte_array.read_u16();
+                    vec.push(ATSourceFile {source_file_index});
+                }
                 other => panic!("Unknown attribute {} found", name)
             }
         }
@@ -208,11 +300,33 @@ impl ClassLoader {
             let name_index = byte_array.read_u16();
             let descriptor_index = byte_array.read_u16();
             let attributes = AttributeParser::read_attributes(byte_array, constant_pool);
+            vec.push(MethodInfo{
+                access_flags,
+                descriptor_index,
+                attributes,
+                return_type: String::from("TODO"),
+                args: Vec::new(),
+                name:String::from(constant_pool.get_string(name_index))
+            });
         }
         vec
     } 
 
-    pub fn load_class(path: &str) {
+    // struct ClassInfo {
+    //     constant_pool: ConstantPool,
+    //     file_path: String,
+    //     size: u64,
+    //     last_modified_string: String,
+    //     minor_version: u16,
+    //     major_version: u16,
+    //     access_flags: u16,
+    //     this_class: u16,
+    //     super_class: u16,
+    //     fields_count: u16,
+    //     source_file: String,
+    //     // static_fields_count: u16,
+    // }
+    pub fn load_class(path: &str) -> ClassInfo {
         let mut byte_array = ByteArray::new (
             fs::read(path).unwrap(),
             0
@@ -229,5 +343,22 @@ impl ClassLoader {
         let interfaces = Self::read_interfaces(&mut byte_array);
         let fields = Self::read_fields(&mut byte_array);
         let methods = Self::read_methods(&mut byte_array, &constant_pool);
+        let attributes = AttributeParser::read_attributes(&mut byte_array, &constant_pool);
+        ClassInfo {
+            constant_pool: constant_pool,
+            file_path: String::from(path),
+            size: byte_array.len(),
+            last_modified_string: String::from("TODO"),
+            minor_version,
+            major_version,
+            access_flags,
+            this_class,
+            super_class,
+            interfaces,
+            fields,
+            methods,
+            attributes,
+            source_file: String::from("TODO"),
+        }
     }
 }
