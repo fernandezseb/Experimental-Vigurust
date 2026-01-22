@@ -1,0 +1,16 @@
+# VigurVM
+
+![Logo of the project, showing a simple drawing inspired by a famous windmill in Vigur, Iceland](Vigur_logo.svg)
+
+A simple java virtual machine made for learning purposes.
+
+
+## Goal and scope
+
+### VigurVM
+
+The goal of this project is to be a simple to understand Rust implementation of a Java Virtual Machine, in order to learn more about Java and Rust. 
+(Because I haven't worked professionally with Rust yet.)
+
+The goal is **not** to be reliable, fast, or memory efficient, or even feature complete.
+Even though it is not set in stone, I will be trying to implement as much features as possible of JDK 8, in the free time that I have.
