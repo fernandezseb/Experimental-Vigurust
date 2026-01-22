@@ -46,7 +46,13 @@ struct MethodInfo {
     attributes: Vec<AttributeInfo>,
     return_type: String,
     args: Vec<String>,
-    name: String,
+    name_index: u16,
+}
+
+impl MethodInfo {
+    pub fn get_name<'a>(self: &Self, constant_pool: &'a ConstantPool) -> &'a str {
+        return &constant_pool.get_string(self.name_index);
+    }
 }
 
 struct ConstantPool {
@@ -306,26 +312,13 @@ impl ClassLoader {
                 attributes,
                 return_type: String::from("TODO"),
                 args: Vec::new(),
-                name:String::from(constant_pool.get_string(name_index))
+                name_index
             });
         }
         vec
     } 
 
-    // struct ClassInfo {
-    //     constant_pool: ConstantPool,
-    //     file_path: String,
-    //     size: u64,
-    //     last_modified_string: String,
-    //     minor_version: u16,
-    //     major_version: u16,
-    //     access_flags: u16,
-    //     this_class: u16,
-    //     super_class: u16,
-    //     fields_count: u16,
-    //     source_file: String,
-    //     // static_fields_count: u16,
-    // }
+    
     pub fn load_class(path: &str) -> ClassInfo {
         let mut byte_array = ByteArray::new (
             fs::read(path).unwrap(),
