@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 cesu8 = "1.1.0"
-
+time = { version = "0.3", features = ["formatting"] }
+sha256 = "1.6.0"
 [lints.rust]
 unused = "allow"

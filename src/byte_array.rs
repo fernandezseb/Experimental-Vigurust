@@ -1,5 +1,5 @@
 pub struct ByteArray {
-    bytes: Vec<u8>,
+    pub bytes: Vec<u8>,
     current: usize
 }
 

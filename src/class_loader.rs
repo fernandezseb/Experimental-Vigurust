@@ -1,7 +1,9 @@
-use crate::byte_array::{self, ByteArray};
+use crate::{byte_array::{self, ByteArray}, descriptor_parser::parse_descriptor};
 
 use std::fs;
 use cesu8::from_cesu8;
+use sha256::digest;
+use time::OffsetDateTime;
 use crate::class_loader::AttributeInfo::{ATCode, ATLineNumberTable, ATLocalVariableTable, ATSourceFile};
 
 const MAGIC_NUMBER : u32 = 0xCAFEBABE;
@@ -23,24 +25,25 @@ const CT_INVOKEDYNAMIC: u8   = 18;
 
 
 pub struct ClassInfo {
-    constant_pool: ConstantPool,
-    file_path: String,
-    size: usize,
-    last_modified_string: String,
-    minor_version: u16,
-    major_version: u16,
-    access_flags: u16,
-    this_class: u16,
-    super_class: u16,
-    interfaces: Vec<u16>,
-    fields: Vec<FieldInfo>,
-    methods: Vec<MethodInfo>,
-    attributes: Vec<AttributeInfo>,
-    source_file: String,
+    pub constant_pool: ConstantPool,
+    pub file_path: String,
+    pub size: usize,
+    pub last_modified: OffsetDateTime,
+    pub minor_version: u16,
+    pub major_version: u16,
+    pub access_flags: u16,
+    pub this_class: u16,
+    pub super_class: u16,
+    pub interfaces: Vec<u16>,
+    pub fields: Vec<FieldInfo>,
+    pub methods: Vec<MethodInfo>,
+    pub attributes: Vec<AttributeInfo>,
+    pub source_file: String,
+    pub hash: String
     // static_fields_count: u16,
 }
 
-struct MethodInfo {
+pub struct MethodInfo {
     access_flags: u16,
     descriptor_index: u16,
     attributes: Vec<AttributeInfo>,
@@ -55,12 +58,12 @@ impl MethodInfo {
     }
 }
 
-struct ConstantPool {
-    constants: Vec<ConstantPoolItem>
+pub struct ConstantPool {
+    pub constants: Vec<ConstantPoolItem>
 }
 
 impl ConstantPool {
-    fn get_string(self: &ConstantPool, index: u16) -> &str {
+    pub fn get_string(self: &ConstantPool, index: u16) -> &str {
         // TODO: Check index?
         let item = &self.constants[(index) as usize];
         match item {
@@ -70,9 +73,29 @@ impl ConstantPool {
             other => panic!("No string found in constantpool at index: {}", index)
         }
     }
+    
+    pub fn get_class_info(self: &ConstantPool, index: u16) -> u16 {
+        let item = &self.constants[(index) as usize];
+        match item {
+            ConstantPoolItem::CPClassInfo { name_index} => {
+                *name_index
+            },
+            other => panic!("No ClassInfo found in constantpool at index: {}", index)
+        }
+    }
+
+    pub fn get_name_and_type(self: &ConstantPool, index: u16) -> (u16,u16) {
+        let item = &self.constants[(index) as usize];
+        match item {
+            ConstantPoolItem::CPNameAndTypeInfo { name_index, descriptor_index} => {
+                (*name_index, *descriptor_index)
+            },
+            other => panic!("No ClassInfo found in constantpool at index: {}", index)
+        }
+    }
 }
 
-enum AttributeInfo {
+pub enum AttributeInfo {
     ATLineNumberTable{entries: Vec<LineNumberTableEntry>},
     ATCode{
         max_stack: u16,
@@ -85,7 +108,7 @@ enum AttributeInfo {
     ATSourceFile{source_file_index: u16},
 }
 
-struct FieldInfo {
+pub struct FieldInfo {
     access_flags: u16,
     name_index: u16,
     desciptor_index: u16,
@@ -98,7 +121,7 @@ struct FieldInfo {
 pub struct ClassLoader {
 }
 
-enum ConstantPoolItem {
+pub enum ConstantPoolItem {
     CPMethodRef{class_index: u16, name_and_type_index: u16},
     CPClassInfo{name_index: u16},
     CPUTF8Info{utf8_string: String},
@@ -110,19 +133,19 @@ enum ConstantPoolItem {
 struct AttributeParser {
 }
 
-struct ExceptionTableEntry {
+pub struct ExceptionTableEntry {
     start_pc: u16,
     end_pc: u16,
     handler_pc: u16,
     catch_type: u16,
 }
 
-struct LineNumberTableEntry {
+pub struct LineNumberTableEntry {
     start_pc: u16,
     line_number: u16,
 }
 
-struct LocalVariableTableEnty {
+pub struct LocalVariableTableEnty {
     start_pc: u16,
     length: u16,
     name_index: u16,
@@ -306,12 +329,14 @@ impl ClassLoader {
             let name_index = byte_array.read_u16();
             let descriptor_index = byte_array.read_u16();
             let attributes = AttributeParser::read_attributes(byte_array, constant_pool);
+            let descriptor = parse_descriptor(constant_pool.get_string(descriptor_index).to_string());
+
             vec.push(MethodInfo{
                 access_flags,
                 descriptor_index,
                 attributes,
-                return_type: String::from("TODO"),
-                args: Vec::new(),
+                return_type: descriptor.return_type,
+                args: descriptor.args,
                 name_index
             });
         }
@@ -324,7 +349,9 @@ impl ClassLoader {
             fs::read(path).unwrap(),
             0
         );
-
+        let metadata = fs::metadata(path).unwrap();
+        let modified: OffsetDateTime = metadata.modified().unwrap().into();
+        //println!("{}", modified_string.unwrap());
         let result = byte_array.read_u32();
         assert_eq!(result, MAGIC_NUMBER);
         let minor_version = byte_array.read_u16();
@@ -341,7 +368,7 @@ impl ClassLoader {
             constant_pool: constant_pool,
             file_path: String::from(path),
             size: byte_array.len(),
-            last_modified_string: String::from("TODO"),
+            last_modified: modified,
             minor_version,
             major_version,
             access_flags,
@@ -352,6 +379,7 @@ impl ClassLoader {
             methods,
             attributes,
             source_file: String::from("TODO"),
+            hash: digest(byte_array.bytes),
         }
     }
 }
