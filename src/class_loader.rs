@@ -44,11 +44,11 @@ pub struct ClassInfo {
 }
 
 pub struct MethodInfo {
-    access_flags: u16,
-    descriptor_index: u16,
-    attributes: Vec<AttributeInfo>,
-    return_type: String,
-    args: Vec<String>,
+    pub access_flags: u16,
+    pub descriptor_index: u16,
+    pub attributes: Vec<AttributeInfo>,
+    pub return_type: String,
+    pub args: Vec<String>,
     name_index: u16,
 }
 

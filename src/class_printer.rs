@@ -2,7 +2,7 @@ use std::{fs, path::Path};
 
 use time::format_description;
 
-use crate::class_loader::{AttributeInfo, ClassInfo, ConstantPool, ConstantPoolItem};
+use crate::class_loader::{AttributeInfo, ClassInfo, ConstantPool, ConstantPoolItem, MethodInfo};
 
 pub struct ClassPrinter {
 }
@@ -43,6 +43,37 @@ impl ClassPrinter {
             println!("{:>4} = {}", number_formatted, output);
         }
     }
+
+    pub fn print_method(method: &MethodInfo, constant_pool: &ConstantPool, class_name: &str) {
+        let name = method.get_name(constant_pool).replace("<init>", class_name);
+        let mut args = String::from("");
+        for (number, arg) in method.args.iter().enumerate() {
+            if number != 0 {args += ", "};
+            let arg_formatted = arg.replace("[", "[]");
+            let arg_without_arr = arg.replace("[", "");
+            match arg_without_arr.as_str() {
+                "I" => {
+                    args += arg_formatted.as_str().replace("I", "int").as_str();
+                },
+                "D" => {
+                    args += arg_formatted.as_str().replace("D", "double").as_str();
+                }
+                other => {
+                    args += arg_formatted.replace("/", ".").as_str();
+                } 
+            }
+        }
+        let mut return_type = method.return_type.clone();
+        if return_type.len() > 0 { return_type += " "}
+        println!("  {}{}({}):", return_type, name, args);
+    }
+
+    pub fn print_methods(class_info: &ClassInfo, class_name: &str) {
+        for method in &class_info.methods {
+            Self::print_method(method, &class_info.constant_pool, class_name);
+        }
+    }
+
     pub fn print_class(class_info: &ClassInfo) {
         let absolute_path = fs::canonicalize(Path::new(&class_info.file_path)).unwrap();
         println!("Classfile {}", absolute_path.display());
@@ -72,6 +103,7 @@ impl ClassPrinter {
             class_info.interfaces.len(), class_info.fields.len(), class_info.methods.len(), class_info.attributes.len());
         Self::print_constant_pool(&class_info.constant_pool);
         println!("{{");
+        Self::print_methods(class_info, class_name);
         println!("}}");
     }
 }
