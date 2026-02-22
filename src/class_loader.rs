@@ -56,6 +56,10 @@ impl MethodInfo {
     pub fn get_name<'a>(self: &Self, constant_pool: &'a ConstantPool) -> &'a str {
         return &constant_pool.get_string(self.name_index);
     }
+
+    pub fn is_constructor(&self, constant_pool: &ConstantPool) -> bool {
+        self.get_name(constant_pool) == "<init>"
+    }
 }
 
 pub struct ConstantPool {

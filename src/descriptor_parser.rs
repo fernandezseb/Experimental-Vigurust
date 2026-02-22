@@ -22,7 +22,7 @@ fn get_types(descriptor: &str) -> Vec<String> {
             'L' => {
                 let location = (&descriptor[i..]).find(';').unwrap();
                 let class = &descriptor[(i+1)..(i+location)];
-                let token = format!("{}{}", class, std::iter::repeat("[").take(array_count).collect::<String>());
+                let token = format!("L{}{};", class, std::iter::repeat("[").take(array_count).collect::<String>());
                 args.push(token);
                 array_count = 0;
                 i += class.len() + 2;

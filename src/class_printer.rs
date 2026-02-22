@@ -44,31 +44,70 @@ impl ClassPrinter {
         }
     }
 
-    pub fn print_method(method: &MethodInfo, constant_pool: &ConstantPool, class_name: &str) {
-        let name = method.get_name(constant_pool).replace("<init>", class_name);
+    fn char_to_type(c: char) -> &'static str {
+        match c {
+            'V' => "void",
+            'B' => "byte",
+            'C' => "char",
+            'D' => "double",
+            'F' => "float",
+            'I' => "int",
+            'J' => "long",
+            'S' => "short",
+            'Z' => "boolean",
+            other => "unknown"
+        }
+    }
+    fn get_as_external_type(type_str: &str) -> String {
+        let mut buffer = String::new();
+        let mut arr_count = 0;
+        let mut in_class = false;
+
+        for c in type_str.chars() {
+            match c {
+                'L' => {
+                    in_class = true;
+                },
+                ';' => {
+                    in_class = false;
+                },
+                '[' => {
+                    arr_count += 1;
+                },
+                '/' if in_class => {
+                    buffer.push('.');
+                }
+                other if in_class => {
+                    buffer.push(other);
+                }
+                other if !in_class => {
+                    buffer += Self::char_to_type(other);
+                },
+                other => buffer.push(other)
+            }
+        }
+
+        for i in 0..arr_count {
+            buffer += "[]";
+        }
+
+        buffer
+    }
+
+    fn print_method(method: &MethodInfo, constant_pool: &ConstantPool, class_name: &str) {
+        let is_constructor = method.is_constructor(constant_pool);
+        let name = if is_constructor {class_name} else {method.get_name(constant_pool)};
         let mut args = String::from("");
         for (number, arg) in method.args.iter().enumerate() {
             if number != 0 {args += ", "};
-            let arg_formatted = arg.replace("[", "[]");
-            let arg_without_arr = arg.replace("[", "");
-            match arg_without_arr.as_str() {
-                "I" => {
-                    args += arg_formatted.as_str().replace("I", "int").as_str();
-                },
-                "D" => {
-                    args += arg_formatted.as_str().replace("D", "double").as_str();
-                }
-                other => {
-                    args += arg_formatted.replace("/", ".").as_str();
-                } 
-            }
+            args+= &Self::get_as_external_type(&arg);
         }
-        let mut return_type = method.return_type.clone();
+        let mut return_type = if is_constructor {String::from("")} else {Self::get_as_external_type(&method.return_type)};
         if return_type.len() > 0 { return_type += " "}
         println!("  {}{}({}):", return_type, name, args);
     }
 
-    pub fn print_methods(class_info: &ClassInfo, class_name: &str) {
+    fn print_methods(class_info: &ClassInfo, class_name: &str) {
         for method in &class_info.methods {
             Self::print_method(method, &class_info.constant_pool, class_name);
         }
