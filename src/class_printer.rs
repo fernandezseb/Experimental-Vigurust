@@ -104,7 +104,18 @@ impl ClassPrinter {
         }
         let mut return_type = if is_constructor {String::from("")} else {Self::get_as_external_type(&method.return_type)};
         if return_type.len() > 0 { return_type += " "}
-        println!("  {}{}({}):", return_type, name, args);
+        let mut flags = String::from("");
+        let mut keywords = String::from("");
+        for (name, bitflags) in method.access_flags.iter_names() {
+            flags += name;
+            flags += ", ";
+            keywords += bitflags.as_keyword();
+            keywords += " ";
+        }
+        let flags_cut = &flags[0..flags.len()-2];
+        println!("  {}{}{}({}):", keywords, return_type, name, args);
+        println!("    descriptor: {}", constant_pool.get_string(method.descriptor_index));
+        println!("    flags: {}", flags_cut);
     }
 
     fn print_methods(class_info: &ClassInfo, class_name: &str) {

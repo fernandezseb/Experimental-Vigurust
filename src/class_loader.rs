@@ -5,6 +5,7 @@ use cesu8::from_cesu8;
 use sha256::digest;
 use time::OffsetDateTime;
 use crate::class_loader::AttributeInfo::{ATCode, ATLineNumberTable, ATLocalVariableTable, ATSourceFile};
+use bitflags::bitflags;
 
 const MAGIC_NUMBER : u32 = 0xCAFEBABE;
 
@@ -23,6 +24,43 @@ const CT_METHODHANDLE: u8    = 15;
 const CT_METHODTYPE: u8      = 16;
 const CT_INVOKEDYNAMIC: u8   = 18;
 
+bitflags! {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    pub struct MethodFlags: u16 {
+        const ACC_PUBLIC = 0x0001;
+        const ACC_PRIVATE = 0x0002;
+        const ACC_PROTECTED = 0x0004;
+        const ACC_STATIC = 0x0008;
+        const ACC_FINAL = 0x0010;
+        const ACC_SYNCHRONIZED = 0x0020;
+        const ACC_BRIDGE = 0x0040;
+        const ACC_VARARGS = 0x0080;
+        const ACC_NATIVE = 0x0100;
+        const ACC_ABSTRACT = 0x0400;
+        const ACC_STRICT = 0x0800;
+        const ACC_SYNTHETIC = 0x1000;
+    }
+}
+
+impl MethodFlags {
+    pub fn as_keyword(&self) -> &'static str {
+        match *self {
+            Self::ACC_PUBLIC => "public",
+            Self::ACC_PRIVATE => "private",
+            Self::ACC_PROTECTED => "protected",
+            Self::ACC_STATIC => "static",
+            Self::ACC_FINAL => "final",
+            Self::ACC_SYNCHRONIZED => "synchronized",
+            Self::ACC_BRIDGE => "bridge",
+            Self::ACC_VARARGS => "varargs",
+            Self::ACC_NATIVE => "native",
+            Self::ACC_ABSTRACT => "abstract",
+            Self::ACC_STRICT => "strict",
+            Self::ACC_SYNTHETIC => "SYNTHETIC",
+            other => "unknown"
+        }
+    }
+}
 
 pub struct ClassInfo {
     pub constant_pool: ConstantPool,
@@ -44,7 +82,7 @@ pub struct ClassInfo {
 }
 
 pub struct MethodInfo {
-    pub access_flags: u16,
+    pub access_flags: MethodFlags,
     pub descriptor_index: u16,
     pub attributes: Vec<AttributeInfo>,
     pub return_type: String,
@@ -335,8 +373,10 @@ impl ClassLoader {
             let attributes = AttributeParser::read_attributes(byte_array, constant_pool);
             let descriptor = parse_descriptor(constant_pool.get_string(descriptor_index).to_string());
 
+            let method_flags : MethodFlags = MethodFlags::from_bits_truncate(access_flags);
+
             vec.push(MethodInfo{
-                access_flags,
+                access_flags: method_flags,
                 descriptor_index,
                 attributes,
                 return_type: descriptor.return_type,
