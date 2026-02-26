@@ -144,7 +144,16 @@ impl ClassPrinter {
         }
         let class_name_index = class_info.constant_pool.get_class_info(class_info.this_class);
         let class_name = class_info.constant_pool.get_string(class_name_index);
-        println!("class {}", class_name);
+        let mut keywords = String::from("");
+        for (name, bitflags) in class_info.access_flags.iter_names() {
+            let keyword = bitflags.as_keyword();
+            if keyword.len() > 0 {
+                keywords += keyword;
+                keywords += " ";
+            }
+        }
+
+        println!("{}class {}", keywords, class_name);
         println!("  minor version: {}", class_info.minor_version);
         println!("  major version: {}", class_info.major_version);
         println!("  this_class: #{}", class_info.this_class);

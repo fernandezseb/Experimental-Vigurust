@@ -27,18 +27,33 @@ const CT_INVOKEDYNAMIC: u8   = 18;
 bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub struct MethodFlags: u16 {
-        const ACC_PUBLIC = 0x0001;
-        const ACC_PRIVATE = 0x0002;
-        const ACC_PROTECTED = 0x0004;
-        const ACC_STATIC = 0x0008;
-        const ACC_FINAL = 0x0010;
+        const ACC_PUBLIC       = 0x0001;
+        const ACC_PRIVATE      = 0x0002;
+        const ACC_PROTECTED    = 0x0004;
+        const ACC_STATIC       = 0x0008;
+        const ACC_FINAL        = 0x0010;
         const ACC_SYNCHRONIZED = 0x0020;
-        const ACC_BRIDGE = 0x0040;
-        const ACC_VARARGS = 0x0080;
-        const ACC_NATIVE = 0x0100;
-        const ACC_ABSTRACT = 0x0400;
-        const ACC_STRICT = 0x0800;
-        const ACC_SYNTHETIC = 0x1000;
+        const ACC_BRIDGE       = 0x0040;
+        const ACC_VARARGS      = 0x0080;
+        const ACC_NATIVE       = 0x0100;
+        const ACC_ABSTRACT     = 0x0400;
+        const ACC_STRICT       = 0x0800;
+        const ACC_SYNTHETIC    = 0x1000;
+    }
+}
+
+bitflags! {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    pub struct ClassFlags: u16 {
+        const ACC_PUBLIC     = 0x0001;
+        const ACC_FINAL      = 0x0010;
+        const ACC_SUPER      = 0x0020;
+        const ACC_INTERFACE  = 0x0200;
+        const ACC_ABSTRACT   = 0x0400;
+        const ACC_SYNTHETIC  = 0x1000;
+        const ACC_ANNOTATION = 0x2000;
+        const ACC_ENUM       = 0x4000;
+        const ACC_MODULE     = 0x8000;
     }
 }
 
@@ -56,7 +71,24 @@ impl MethodFlags {
             Self::ACC_NATIVE => "native",
             Self::ACC_ABSTRACT => "abstract",
             Self::ACC_STRICT => "strict",
-            Self::ACC_SYNTHETIC => "SYNTHETIC",
+            Self::ACC_SYNTHETIC => "synthetic",
+            other => "unknown"
+        }
+    }
+}
+
+impl ClassFlags {
+    pub fn as_keyword(&self) -> &'static str {
+        match *self {
+            Self::ACC_PUBLIC => "public",
+            Self::ACC_FINAL => "final",
+            Self::ACC_SUPER => "",
+            Self::ACC_INTERFACE => "",
+            Self::ACC_ABSTRACT => "abstract",
+            Self::ACC_SYNTHETIC => "synthetic",
+            Self::ACC_ANNOTATION => "",
+            Self::ACC_ENUM => "",
+            Self::ACC_MODULE => "",
             other => "unknown"
         }
     }
@@ -69,7 +101,7 @@ pub struct ClassInfo {
     pub last_modified: OffsetDateTime,
     pub minor_version: u16,
     pub major_version: u16,
-    pub access_flags: u16,
+    pub access_flags: ClassFlags,
     pub this_class: u16,
     pub super_class: u16,
     pub interfaces: Vec<u16>,
@@ -373,10 +405,8 @@ impl ClassLoader {
             let attributes = AttributeParser::read_attributes(byte_array, constant_pool);
             let descriptor = parse_descriptor(constant_pool.get_string(descriptor_index).to_string());
 
-            let method_flags : MethodFlags = MethodFlags::from_bits_truncate(access_flags);
-
             vec.push(MethodInfo{
-                access_flags: method_flags,
+                access_flags: MethodFlags::from_bits_truncate(access_flags),
                 descriptor_index,
                 attributes,
                 return_type: descriptor.return_type,
@@ -415,7 +445,7 @@ impl ClassLoader {
             last_modified: modified,
             minor_version,
             major_version,
-            access_flags,
+            access_flags: ClassFlags::from_bits_truncate(access_flags),
             this_class,
             super_class,
             interfaces,
