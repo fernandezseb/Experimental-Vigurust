@@ -115,7 +115,7 @@ impl ClassPrinter {
         let flags_cut = &flags[0..flags.len()-2];
         println!("  {}{}{}({}):", keywords, return_type, name, args);
         println!("    descriptor: {}", constant_pool.get_string(method.descriptor_index));
-        println!("    flags: {}", flags_cut);
+        println!("    flags: ({:#06x}) {}", method.access_flags.bits(), flags_cut);
     }
 
     fn print_methods(class_info: &ClassInfo, class_name: &str) {
@@ -145,17 +145,23 @@ impl ClassPrinter {
         let class_name_index = class_info.constant_pool.get_class_info(class_info.this_class);
         let class_name = class_info.constant_pool.get_string(class_name_index);
         let mut keywords = String::from("");
+        let mut flags = String::from("");
         for (name, bitflags) in class_info.access_flags.iter_names() {
             let keyword = bitflags.as_keyword();
             if keyword.len() > 0 {
                 keywords += keyword;
                 keywords += " ";
             }
+            flags += name;
+            flags += ", ";
         }
+
+        let flags = &flags[0..(flags.len()-2)];
 
         println!("{}class {}", keywords, class_name);
         println!("  minor version: {}", class_info.minor_version);
         println!("  major version: {}", class_info.major_version);
+        println!("  flags: ({:#06x}) {}", class_info.access_flags.bits(), flags);
         println!("  this_class: #{}", class_info.this_class);
         println!("  super_class: #{}", class_info.super_class);
         println!("  interfaces: {}, fields: {}, methods: {}, attributes: {}",
