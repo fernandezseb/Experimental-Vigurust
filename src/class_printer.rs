@@ -2,7 +2,7 @@ use std::{fs, path::Path};
 
 use time::format_description;
 
-use crate::class_loader::{AttributeInfo, ClassInfo, ConstantPool, ConstantPoolItem, MethodInfo};
+use crate::class_loader::{ATSourceFile, AttributeInfo, ClassInfo, ConstantPool, ConstantPoolItem, MethodFlags, MethodInfo};
 
 pub struct ClassPrinter {
 }
@@ -116,6 +116,21 @@ impl ClassPrinter {
         println!("  {}{}{}({}):", keywords, return_type, name, args);
         println!("    descriptor: {}", constant_pool.get_string(method.descriptor_index));
         println!("    flags: ({:#06x}) {}", method.access_flags.bits(), flags_cut);
+
+        let code = method.get_code();
+        match code {
+            Some(code_attribute) => {
+                println!("    Code:");
+                let mut args_size = method.args.len();
+                if !method.access_flags.contains(MethodFlags::ACC_STATIC) {
+                    args_size = args_size + 1;
+                }
+                println!("      stack={}, locals={}, args_size={}", code_attribute.max_stack, code_attribute.max_locals, args_size);
+            },
+            None => {
+                // Do nothing for the time being
+            }
+        }
     }
 
     fn print_methods(class_info: &ClassInfo, class_name: &str) {
@@ -133,7 +148,7 @@ impl ClassPrinter {
         println!("  SHA-256 checksum {}", class_info.hash);
         for att in &class_info.attributes {
             match att {
-                AttributeInfo::ATSourceFile { source_file_index } => {
+                AttributeInfo::SourceFile(ATSourceFile { source_file_index }) => {
                     let source_file = class_info.constant_pool.get_string(*source_file_index);
                     println!("  Compiled from \"{}\"", source_file);
                 },

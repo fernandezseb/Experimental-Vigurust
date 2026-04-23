@@ -4,7 +4,6 @@ use std::fs;
 use cesu8::from_cesu8;
 use sha256::digest;
 use time::OffsetDateTime;
-use crate::class_loader::AttributeInfo::{ATCode, ATLineNumberTable, ATLocalVariableTable, ATSourceFile};
 use bitflags::bitflags;
 
 const MAGIC_NUMBER : u32 = 0xCAFEBABE;
@@ -130,6 +129,19 @@ impl MethodInfo {
     pub fn is_constructor(&self, constant_pool: &ConstantPool) -> bool {
         self.get_name(constant_pool) == "<init>"
     }
+
+    pub fn get_code(&self) -> Option<&ATCode> {
+        let mut code_attribute:Option<&ATCode> = None;
+        for attribute in &self.attributes {
+            match attribute {
+                AttributeInfo::Code(code) => {
+                    code_attribute = Some(code);
+                },
+                other => {}
+            }
+        }
+        code_attribute
+    }
 }
 
 pub struct ConstantPool {
@@ -169,17 +181,31 @@ impl ConstantPool {
     }
 }
 
+pub struct ATLineNumberTable{
+    pub entries: Vec<LineNumberTableEntry>
+}
+
+pub struct ATCode{
+    pub max_stack: u16,
+    pub max_locals: u16,
+    pub code: Vec<u8>,
+    pub exceptions: Vec<ExceptionTableEntry>,
+    pub attributes: Vec<AttributeInfo>,
+}
+
+pub struct ATLocalVariableTable{
+    pub entries: Vec<LocalVariableTableEnty>
+}
+
+pub struct ATSourceFile{
+    pub source_file_index: u16
+}
+
 pub enum AttributeInfo {
-    ATLineNumberTable{entries: Vec<LineNumberTableEntry>},
-    ATCode{
-        max_stack: u16,
-        max_locals: u16,
-        code: Vec<u8>,
-        exceptions: Vec<ExceptionTableEntry>,
-        attributes: Vec<AttributeInfo>,
-    },
-    ATLocalVariableTable{entries: Vec<LocalVariableTableEnty>},
-    ATSourceFile{source_file_index: u16},
+    LineNumberTable(ATLineNumberTable),
+    Code(ATCode),
+    LocalVariableTable(ATLocalVariableTable),
+    SourceFile(ATSourceFile)
 }
 
 pub struct FieldInfo {
@@ -248,7 +274,7 @@ impl AttributeParser {
 
     fn read_attributes(byte_array: &mut ByteArray, constant_pool: &ConstantPool) -> Vec<AttributeInfo> {
         let count = byte_array.read_u16() as usize;
-        let mut vec = Vec::with_capacity(count);
+        let mut vec: Vec<AttributeInfo> = Vec::with_capacity(count);
         for _current_attribute in 0..count {
             let attribute_name_index = byte_array.read_u16();
             let attribute_length = byte_array.read_u32();
@@ -262,13 +288,13 @@ impl AttributeParser {
                     let code_vec = code.to_vec().clone();
                     let exceptions = Self::read_exception_table(byte_array);
                     let attributes = Self::read_attributes(byte_array, constant_pool);
-                    vec.push(ATCode {
+                    vec.push(AttributeInfo::Code(ATCode {
                         max_stack,
                         max_locals,
                         code: code_vec,
                         exceptions,
                         attributes
-                    });
+                    }));
                 },
                 "LineNumberTable" => {
                     let line_number_table_length = byte_array.read_u16() as usize;
@@ -278,7 +304,7 @@ impl AttributeParser {
                         let line_number = byte_array.read_u16();
                         entries.push(LineNumberTableEntry{start_pc, line_number, });
                     }
-                    vec.push(ATLineNumberTable {entries});
+                    vec.push(AttributeInfo::LineNumberTable(ATLineNumberTable {entries}));
                 }
                 "LocalVariableTable" => {
                     let local_variable_table_length = byte_array.read_u16() as usize;
@@ -297,11 +323,11 @@ impl AttributeParser {
                             index
                         })
                     }
-                    vec.push(ATLocalVariableTable {entries});
+                    vec.push(AttributeInfo::LocalVariableTable(ATLocalVariableTable {entries}));
                 },
                 "SourceFile" => {
                     let source_file_index = byte_array.read_u16();
-                    vec.push(ATSourceFile {source_file_index});
+                    vec.push(AttributeInfo::SourceFile(ATSourceFile {source_file_index}));
                 }
                 other => panic!("Unknown attribute {} found", name)
             }
