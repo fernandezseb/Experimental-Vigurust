@@ -2,7 +2,7 @@ use std::{fs, path::Path};
 
 use time::format_description;
 
-use crate::class_loader::{ATSourceFile, AttributeInfo, ClassInfo, ConstantPool, ConstantPoolItem, MethodFlags, MethodInfo};
+use crate::{class_loader::{ATSourceFile, AttributeInfo, ClassInfo, ConstantPool, ConstantPoolItem, MethodFlags, MethodInfo}, code_printer::CodePrinter};
 
 pub struct ClassPrinter {
 }
@@ -126,6 +126,7 @@ impl ClassPrinter {
                     args_size = args_size + 1;
                 }
                 println!("      stack={}, locals={}, args_size={}", code_attribute.max_stack, code_attribute.max_locals, args_size);
+                CodePrinter::print_code(&code_attribute.code)
             },
             None => {
                 // Do nothing for the time being

@@ -2,6 +2,7 @@ mod class_loader;
 mod byte_array;
 mod descriptor_parser;
 mod class_printer;
+mod code_printer;
 
 use class_loader::ClassLoader;
 

@@ -1,6 +1,6 @@
 pub struct ByteArray {
     pub bytes: Vec<u8>,
-    current: usize
+    pub current: usize
 }
 
 impl ByteArray {
