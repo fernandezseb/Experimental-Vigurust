@@ -3,6 +3,7 @@ use std::{fs, path::Path};
 use time::format_description;
 
 use crate::{class_loader::{ATSourceFile, AttributeInfo, ClassInfo, ConstantPool, ConstantPoolItem, MethodFlags, MethodInfo}, code_printer::CodePrinter};
+use crate::constant_pool_printer::resolve_print_cp_item;
 
 pub struct ClassPrinter {
 }
@@ -126,7 +127,7 @@ impl ClassPrinter {
                     args_size = args_size + 1;
                 }
                 println!("      stack={}, locals={}, args_size={}", code_attribute.max_stack, code_attribute.max_locals, args_size);
-                CodePrinter::print_code(&code_attribute.code)
+                CodePrinter::print_code(&code_attribute.code, constant_pool)
             },
             None => {
                 // Do nothing for the time being
@@ -178,8 +179,12 @@ impl ClassPrinter {
         println!("  minor version: {}", class_info.minor_version);
         println!("  major version: {}", class_info.major_version);
         println!("  flags: ({:#06x}) {}", class_info.access_flags.bits(), flags);
-        println!("  this_class: #{}", class_info.this_class);
-        println!("  super_class: #{}", class_info.super_class);
+        print!("  this_class: #{} // ", class_info.this_class);
+        resolve_print_cp_item(class_info.constant_pool.constants.get(class_info.this_class as usize).unwrap(), &class_info.constant_pool);
+        println!();
+        print!("  super_class: #{} // ", class_info.super_class);
+        resolve_print_cp_item(class_info.constant_pool.constants.get(class_info.super_class as usize).unwrap(), &class_info.constant_pool);
+        println!();
         println!("  interfaces: {}, fields: {}, methods: {}, attributes: {}",
             class_info.interfaces.len(), class_info.fields.len(), class_info.methods.len(), class_info.attributes.len());
         Self::print_constant_pool(&class_info.constant_pool);
