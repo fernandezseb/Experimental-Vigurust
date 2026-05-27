@@ -240,8 +240,7 @@ pub fn short_indices(args: Vec<u8>, constant_pool: &ConstantPool) {
 		let bytes = [args[i], args[i+1]];
 		let index = u16::from_be_bytes(bytes) as usize;
 		let cp_item = constant_pool.constants.get(index).unwrap(); // TODO: Add error handling
-		print!("                        //");
-		constant_pool_printer::resolve_print_cp_item_named(cp_item, constant_pool);
+		println!("                        // {}", constant_pool_printer::resolve_print_cp_item_named(cp_item, constant_pool));
 	}
 }
 
