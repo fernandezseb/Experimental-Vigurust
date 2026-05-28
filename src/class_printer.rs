@@ -179,10 +179,10 @@ impl ClassPrinter {
         println!("  minor version: {}", class_info.minor_version);
         println!("  major version: {}", class_info.major_version);
         println!("  flags: ({:#06x}) {}", class_info.access_flags.bits(), flags);
-        println!("  this_class: #{} // {}", class_info.this_class,
+        println!("{:38} // {}", format!("  this_class: #{}", class_info.this_class),
                  resolve_print_cp_item(class_info.constant_pool.constants.get(class_info.this_class as usize).unwrap(), &class_info.constant_pool));
-        print!("  super_class: #{} // {}", class_info.super_class,
-               resolve_print_cp_item(class_info.constant_pool.constants.get(class_info.super_class as usize).unwrap(), &class_info.constant_pool));
+        println!("{:38} // {}", format!("  super_class: #{}", class_info.this_class),
+                 resolve_print_cp_item(class_info.constant_pool.constants.get(class_info.super_class as usize).unwrap(), &class_info.constant_pool));
         println!("  interfaces: {}, fields: {}, methods: {}, attributes: {}",
             class_info.interfaces.len(), class_info.fields.len(), class_info.methods.len(), class_info.attributes.len());
         Self::print_constant_pool(&class_info.constant_pool);
