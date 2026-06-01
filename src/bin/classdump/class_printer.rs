@@ -1,8 +1,8 @@
 use std::{fs, path::Path};
 
 use time::format_description;
-
-use crate::{class_loader::{ATSourceFile, AttributeInfo, ClassInfo, ConstantPool, ConstantPoolItem, MethodFlags, MethodInfo}, code_printer::CodePrinter};
+use vigur::class_loader::{ATSourceFile, AttributeInfo, ClassInfo, ConstantPool, ConstantPoolItem, MethodFlags, MethodInfo};
+use crate::code_printer::CodePrinter;
 use crate::constant_pool_printer::resolve_print_cp_item;
 
 pub struct ClassPrinter {

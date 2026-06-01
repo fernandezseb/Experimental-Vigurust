@@ -1,4 +1,4 @@
-use crate::class_loader::{ConstantPool, ConstantPoolItem};
+use vigur::class_loader::{ConstantPool, ConstantPoolItem};
 
 pub fn resolve_print_cp_item_named(item: &ConstantPoolItem, cp: &ConstantPool) -> String {
     match item {

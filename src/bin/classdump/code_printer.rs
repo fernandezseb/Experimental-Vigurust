@@ -1,7 +1,6 @@
 use bitflags::bitflags;
-
-use crate::byte_array::ByteArray;
-use crate::class_loader::ConstantPool;
+use vigur::byte_array::ByteArray;
+use vigur::class_loader::ConstantPool;
 use crate::constant_pool_printer;
 
 bitflags! {
