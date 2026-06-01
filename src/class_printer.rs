@@ -127,7 +127,19 @@ impl ClassPrinter {
                     args_size = args_size + 1;
                 }
                 println!("      stack={}, locals={}, args_size={}", code_attribute.max_stack, code_attribute.max_locals, args_size);
-                CodePrinter::print_code(&code_attribute.code, constant_pool)
+                CodePrinter::print_code(&code_attribute.code, constant_pool);
+                let line_number_table = code_attribute.get_line_number_table();
+                match line_number_table {
+                    Some(lines) => {
+                        println!("      LineNumberTable:");
+                        for line in &lines.entries {
+                            println!("        line {}: {}", line.line_number, line.start_pc);
+                        }
+                    },
+                    None => {
+                        // Do nothing
+                    }
+                }
             },
             None => {
                 // Do nothing for the time being
