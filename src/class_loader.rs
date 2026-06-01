@@ -107,9 +107,25 @@ pub struct ClassInfo {
     pub fields: Vec<FieldInfo>,
     pub methods: Vec<MethodInfo>,
     pub attributes: Vec<AttributeInfo>,
-    pub source_file: String,
     pub hash: String
     // static_fields_count: u16,
+}
+
+impl ClassInfo {
+    pub fn get_source_file_attribute(&self) -> Option<&ATSourceFile> {
+        self.attributes.iter().find_map(|attr| {
+            if let AttributeInfo::SourceFile(source) = attr {
+                Some(source)
+            } else {
+                None
+            }
+        })
+    }
+
+    pub fn get_source_file(&self) -> Option<&str> {
+        self.get_source_file_attribute()
+            .map(|att| self.constant_pool.get_string(att.source_file_index))
+    }
 }
 
 pub struct MethodInfo {
@@ -493,7 +509,7 @@ impl ClassLoader {
             fields,
             methods,
             attributes,
-            source_file: String::from("TODO"),
+            //source_file: String::from("TODO"),
             hash: digest(byte_array.bytes),
         }
     }

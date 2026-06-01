@@ -201,5 +201,7 @@ impl ClassPrinter {
         println!("{{");
         Self::print_methods(class_info, class_name);
         println!("}}");
+        let source_file = class_info.get_source_file();
+        source_file.inspect(|s| println!("SourceFile: \"{}\"", s));
     }
 }
