@@ -193,6 +193,21 @@ pub struct ATCode{
     pub attributes: Vec<AttributeInfo>,
 }
 
+impl ATCode {
+    pub fn get_line_number_table(&self) -> Option<&ATLineNumberTable> {
+        let mut line_number_table:Option<&ATLineNumberTable> = None;
+        for attribute in &self.attributes {
+            match attribute {
+                AttributeInfo::LineNumberTable(lnt) => {
+                    line_number_table = Some(lnt);
+                },
+                other => {}
+            }
+        }
+        line_number_table
+    }
+}
+
 pub struct ATLocalVariableTable{
     pub entries: Vec<LocalVariableTableEnty>
 }
@@ -241,8 +256,8 @@ pub struct ExceptionTableEntry {
 }
 
 pub struct LineNumberTableEntry {
-    start_pc: u16,
-    line_number: u16,
+    pub start_pc: u16,
+    pub line_number: u16,
 }
 
 pub struct LocalVariableTableEnty {

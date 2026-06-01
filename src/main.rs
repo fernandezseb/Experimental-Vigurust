@@ -3,6 +3,7 @@ mod byte_array;
 mod descriptor_parser;
 mod class_printer;
 mod code_printer;
+mod constant_pool_printer;
 
 use class_loader::ClassLoader;
 
